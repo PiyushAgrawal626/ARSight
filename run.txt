@@ -1,0 +1,41 @@
+# ============================================================
+# RUN INSTRUCTIONS FOR SMART GLASSES VR SYSTEM
+# ============================================================
+
+To properly launch the dual-server system, you need to open TWO separate command prompt (or PowerShell) windows in this directory and start each server independently.
+
+# ------------------------------------------------------------
+# TERMINAL 1: The VR Video Player Server
+# ------------------------------------------------------------
+This server acts as your main VR headset/video player logic.
+
+Command:
+python -m uvicorn video_server:app --port 8000
+
+Access it in your browser at: 
+http://127.0.0.1:8000
+
+
+
+# ------------------------------------------------------------
+# TERMINAL 2: The OCR & Smart Glasses Engine
+# ------------------------------------------------------------
+This server performs machine-learning image extraction and serves the Smart Glasses UI.
+(Note: Using the UTF-8 environment variable ensures the translation engine doesn't crash on Windows terminals).
+
+Command (PowerShell):
+$env:PYTHONIOENCODING="utf-8"; python -m uvicorn ocr_server:app --port 8001
+
+Command (Standard CMD):
+set PYTHONIOENCODING=utf-8 && python -m uvicorn ocr_server:app --port 8001
+
+Access your Smart Glasses HUD at: 
+http://127.0.0.1:8001
+
+
+# ------------------------------------------------------------
+# FINAL STEPS
+# ------------------------------------------------------------
+1. Ensure both windows are running.
+2. In your secondary browser window (Port 8001), click "Enable Audio Overlay Setup" so Google Chrome gives permission for the robot text-to-speech engine to activate.
+3. In your main browser window (Port 8000), select a video and press Play!

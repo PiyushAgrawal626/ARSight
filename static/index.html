@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Video Player (Server 1)</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #video-container { position: relative; width: 80%; max-width: 1200px; }
+        video { width: 100%; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); }
+        .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button, select { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; background: #333; color: #fff; transition: background 0.2s; }
+        button:hover { background: #555; }
+        #status { margin-top: 20px; font-size: 14px; color: #aaa; }
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+    <h1>VR Video Player</h1>
+    <div id="video-container">
+        <video id="player" controls crossorigin="anonymous"></video>
+        <canvas id="canvas"></canvas>
+    </div>
+    <div class="controls">
+        <select id="videoSelect"><option value="">Loading videos...</option></select>
+        <button id="playBtn">Play & Send Frames to OCR</button>
+        <button id="stopBtn">Stop</button>
+    </div>
+    <div id="status">OCR Server (Port 8001): Not Connected</div>
+
+    <script>
+        const player = document.getElementById('player');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const videoSelect = document.getElementById('videoSelect');
+
+        let ws;
+        let captureInterval;
+
+        fetch('/videos_list').then(res => res.json()).then(data => {
+            videoSelect.innerHTML = '<option value="">Select a video...</option>';
+            data.videos.forEach(v => {
+                const option = document.createElement('option');
+                option.value = `/video/${v}`;
+                option.textContent = v;
+                videoSelect.appendChild(option);
+            });
+        });
+
+        videoSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                player.src = e.target.value;
+                player.crossOrigin = "anonymous";
+            }
+        });
+
+        function connectWebSocket() {
+            // Note: OCR server runs on 8001
+            ws = new WebSocket(`ws://127.0.0.1:8001/ws/process`);
+            ws.onopen = () => {
+                statusEl.textContent = 'OCR Server: Connected (Port 8001)';
+                statusEl.style.color = '#0f0';
+            };
+            ws.onclose = () => {
+                statusEl.textContent = 'OCR Server: Disconnected';
+                statusEl.style.color = '#f00';
+            };
+        }
+
+        function startCapture() {
+            if (captureInterval) return;
+            captureInterval = setInterval(() => {
+                if (player.paused || player.ended) return;
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                canvas.width = player.videoWidth || 640;
+                canvas.height = player.videoHeight || 480;
+                ctx.drawImage(player, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL('image/jpeg', 0.5);
+                ws.send(JSON.stringify({ image: imageData }));
+            }, 1000);
+        }
+
+        function stopCapture() {
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+        }
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) connectWebSocket();
+            player.play();
+            startCapture();
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            player.pause();
+            stopCapture();
+            if (ws) ws.close();
+        });
+        
+        player.addEventListener('pause', stopCapture);
+        player.addEventListener('ended', stopCapture);
+    </script>
+</body>
+</html>

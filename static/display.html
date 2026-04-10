@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Glasses Display (Server 2)</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #000; color: #0f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        h1 { color: #fff; position: absolute; top: 20px; font-family: sans-serif; }
+        #text-box { width: 80%; max-width: 800px; text-align: center; font-size: 48px; font-weight: bold; text-shadow: 0 0 10px #0f0; transition: opacity 0.3s; }
+        #status { position: absolute; bottom: 20px; font-size: 14px; color: #555; font-family: sans-serif; }
+        .thirdweb-link { position: absolute; top: 20px; left: 20px; color: #aaa; text-decoration: none; font-size: 14px; font-weight: bold; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; font-family: sans-serif; }
+        .thirdweb-link:hover { color: #fff; background: rgba(255,255,255,0.3); }
+        #start-audio { margin-top: 20px; padding: 10px 20px; background: #222; color: #fff; border: 1px solid #444; border-radius: 5px; cursor: pointer; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <a href="https://thirdweb.com" target="_blank" class="thirdweb-link">Powered by thirdweb.com</a>
+    <h1>Smart Glasses View</h1>
+    
+    <!-- Browser needs user interaction to allow Text-To-Speech -->
+    <button id="start-audio">Enable Audio Overlay Setup</button>
+    
+    <div id="text-box">Waiting for extraction...</div>
+    <div id="status">Connecting to Backend...</div>
+
+    <script>
+        const textBox = document.getElementById('text-box');
+        const statusEl = document.getElementById('status');
+        let audioEnabled = false;
+
+        document.getElementById('start-audio').addEventListener('click', () => {
+            // Dummy speak to unlock AudioContext/WebSpeech API
+            const msg = new SpeechSynthesisUtterance("Smart Glasses Audio Enabled.");
+            window.speechSynthesis.speak(msg);
+            audioEnabled = true;
+            document.getElementById('start-audio').style.display = 'none';
+        });
+
+        function connect() {
+            const ws = new WebSocket(`ws://${window.location.host}/ws/display`);
+            ws.onopen = () => { statusEl.textContent = 'Connected & Listening for Broadcasts'; };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                textBox.textContent = data.translated;
+                
+                // Read aloud
+                if (audioEnabled) {
+                    const utterance = new SpeechSynthesisUtterance(data.translated);
+                    utterance.rate = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+            };
+            ws.onclose = () => { 
+                statusEl.textContent = 'Lost connection. Retrying...'; 
+                setTimeout(connect, 2000);
+            };
+        }
+        connect();
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+easyocr
+deep-translator
+pyttsx3
+websockets
+python-multipart
+pillow
+numpy
