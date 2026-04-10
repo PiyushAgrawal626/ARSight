@@ -39,3 +39,14 @@ http://127.0.0.1:8001
 1. Ensure both windows are running.
 2. In your secondary browser window (Port 8001), click "Enable Audio Overlay Setup" so Google Chrome gives permission for the robot text-to-speech engine to activate.
 3. In your main browser window (Port 8000), select a video and press Play!
+
+# ------------------------------------------------------------
+# TROUBLESHOOTING: HOW TO KILL STUCK PORTS
+# ------------------------------------------------------------
+If either server crashes or you get an "Address already in use" error when trying to start them, it means a background Python process is still stubbornly holding the port open.
+
+To forcefully kill Port 8000 (Video Server), run in PowerShell:
+$pidToKill = (Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Where-Object State -eq 'Listen').OwningProcess; if ($pidToKill) { Stop-Process -Id $pidToKill -Force }
+
+To forcefully kill Port 8001 (Smart Glasses Server), run in PowerShell:
+$pidToKill = (Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue | Where-Object State -eq 'Listen').OwningProcess; if ($pidToKill) { Stop-Process -Id $pidToKill -Force }
